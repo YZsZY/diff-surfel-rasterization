@@ -158,7 +158,7 @@ renderCUDA(
 	const uint32_t* __restrict__ n_contrib,
 	const float* __restrict__ dL_dpixels,
 	const float* __restrict__ dL_depths,
-	float * __restrict__ dL_dtransMat,
+	float * __restrict__ dL_dtransMat, // bug
     const float* __restrict__ dL_dpixel_extras, // note
 	float3* __restrict__ dL_dmean2D,
 	float* __restrict__ dL_dnormal3D,
@@ -398,7 +398,7 @@ renderCUDA(
                 // Update the gradients w.r.t. norm of the Gaussian.
                 // Atomic, since this pixel is just one of potentially
                 // many that were affected by this Gaussian.
-                atomicAdd(&(dL_dextras[global_id * ED + ch]), weight * dL_dextrach);
+                atomicAdd(&(dL_dextras[global_id * ED + ch]), w * dL_dextrach); // bug
             }
 
 			dL_dalpha *= T;
@@ -725,13 +725,13 @@ void BACKWARD::render(
 	const uint32_t* n_contrib,
 	const float* dL_dpixels,
 	const float* dL_depths,
+	float* dL_dtransMat,
     const float* dL_dpixel_extras, // note
-	float * dL_dtransMat,
 	float3* dL_dmean2D,
 	float* dL_dnormal3D,
 	float* dL_dopacity,
 	float* dL_dcolors,
-    float* dL_dextras) // note
+    float* dL_dextras)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> >(
 		ranges, // const uint2*
@@ -750,7 +750,7 @@ void BACKWARD::render(
 		dL_dpixels, // const float*
 		dL_depths, // const float*
 		dL_dtransMat, // float *
-        dL_dpixel_extras, // const float* note
+        dL_dpixel_extras, // const float*
 		dL_dmean2D, // float3*
 		dL_dnormal3D, // float*
 		dL_dopacity, // float*
