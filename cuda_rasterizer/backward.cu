@@ -145,7 +145,7 @@ __global__ void __launch_bounds__(BLOCK_X * BLOCK_Y)
 renderCUDA(
 	const uint2* __restrict__ ranges,
 	const uint32_t* __restrict__ point_list,
-	int W, int H, int ED,
+	int W, int H, int ED, // note
 	float focal_x, float focal_y,
 	const float* __restrict__ bg_color,
 	const float2* __restrict__ points_xy_image,
@@ -153,18 +153,18 @@ renderCUDA(
 	const float* __restrict__ transMats,
 	const float* __restrict__ colors,
 	const float* __restrict__ depths,
-    const float* __restrict__ extras,
+    const float* __restrict__ extras, // note
 	const float* __restrict__ final_Ts,
 	const uint32_t* __restrict__ n_contrib,
 	const float* __restrict__ dL_dpixels,
 	const float* __restrict__ dL_depths,
 	float * __restrict__ dL_dtransMat,
-    const float* __restrict__ dL_dpixel_extras,
+    const float* __restrict__ dL_dpixel_extras, // note
 	float3* __restrict__ dL_dmean2D,
 	float* __restrict__ dL_dnormal3D,
 	float* __restrict__ dL_dopacity,
 	float* __restrict__ dL_dcolors,
-    float* __restrict__ dL_dextras)
+    float* __restrict__ dL_dextras) // note
 {
 	// We rasterize again. Compute necessary block info.
 	auto block = cg::this_thread_block();
@@ -712,7 +712,7 @@ void BACKWARD::render(
 	const dim3 grid, const dim3 block,
 	const uint2* ranges,
 	const uint32_t* point_list,
-	int W, int H, int ED,
+	int W, int H, int ED, // note
 	float focal_x, float focal_y,
 	const float* bg_color,
 	const float2* means2D,
@@ -720,41 +720,41 @@ void BACKWARD::render(
 	const float* colors,
 	const float* transMats,
 	const float* depths,
-    const float* extras,
+    const float* extras, // note
 	const float* final_Ts,
 	const uint32_t* n_contrib,
 	const float* dL_dpixels,
 	const float* dL_depths,
-    const float* dL_dpixel_extras,
+    const float* dL_dpixel_extras, // note
 	float * dL_dtransMat,
 	float3* dL_dmean2D,
 	float* dL_dnormal3D,
 	float* dL_dopacity,
 	float* dL_dcolors,
-    float* dL_dextras)
+    float* dL_dextras) // note
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> >(
-		ranges,
-		point_list,
-		W, H, ED,
-		focal_x, focal_y,
-		bg_color,
-		means2D,
-		normal_opacity,
-		transMats,
-		colors,
-		depths,
-        extras,
-		final_Ts,
-		n_contrib,
-		dL_dpixels,
-		dL_depths,
-        dL_dpixel_extras,
-		dL_dtransMat,
-		dL_dmean2D,
-		dL_dnormal3D,
-		dL_dopacity,
-		dL_dcolors,
-        dL_dextras
+		ranges, // const uint2*
+		point_list, // const uint32_t*
+		W, H, ED, // int note
+		focal_x, focal_y, // float
+		bg_color, // const float*
+		means2D, // const float2*
+		normal_opacity, // const float4*
+		transMats, // const float*
+		colors, // const float*
+		depths, // const float*
+        extras, // const float* note
+		final_Ts, // const float*
+		n_contrib, // const uint32_t*
+		dL_dpixels, // const float*
+		dL_depths, // const float*
+		dL_dtransMat, // float *
+        dL_dpixel_extras, // const float* note
+		dL_dmean2D, // float3*
+		dL_dnormal3D, // float*
+		dL_dopacity, // float*
+		dL_dcolors, // float*
+        dL_dextras // float* note
 		);
 }
