@@ -145,7 +145,7 @@ __global__ void __launch_bounds__(BLOCK_X * BLOCK_Y)
 renderCUDA(
 	const uint2* __restrict__ ranges,
 	const uint32_t* __restrict__ point_list,
-	int W, int H,
+	int W, int H, int ED,
 	float focal_x, float focal_y,
 	const float* __restrict__ bg_color,
 	const float2* __restrict__ points_xy_image,
@@ -153,15 +153,18 @@ renderCUDA(
 	const float* __restrict__ transMats,
 	const float* __restrict__ colors,
 	const float* __restrict__ depths,
+    const float* __restrict__ extras,
 	const float* __restrict__ final_Ts,
 	const uint32_t* __restrict__ n_contrib,
 	const float* __restrict__ dL_dpixels,
 	const float* __restrict__ dL_depths,
 	float * __restrict__ dL_dtransMat,
+    const float* __restrict__ dL_dpixel_extras,
 	float3* __restrict__ dL_dmean2D,
 	float* __restrict__ dL_dnormal3D,
 	float* __restrict__ dL_dopacity,
-	float* __restrict__ dL_dcolors)
+	float* __restrict__ dL_dcolors,
+    float* __restrict__ dL_dextras)
 {
 	// We rasterize again. Compute necessary block info.
 	auto block = cg::this_thread_block();
@@ -187,6 +190,7 @@ renderCUDA(
 	__shared__ float3 collected_Tu[BLOCK_SIZE];
 	__shared__ float3 collected_Tv[BLOCK_SIZE];
 	__shared__ float3 collected_Tw[BLOCK_SIZE];
+	__shared__ float collected_extras[MAX_EXTRA_DIMS * BLOCK_SIZE];
 	// __shared__ float collected_depths[BLOCK_SIZE];
 
 	// In the forward, we stored the final value for T, the
@@ -200,7 +204,9 @@ renderCUDA(
 	const int last_contributor = inside ? n_contrib[pix_id] : 0;
 
 	float accum_rec[C] = { 0 };
+    float accum_ree[MAX_EXTRA_DIMS] = { 0 };
 	float dL_dpixel[C];
+    float dL_dpixel_extra[MAX_EXTRA_DIMS];
 
 #if RENDER_AXUTILITY
 	float dL_dreg;
@@ -220,11 +226,14 @@ renderCUDA(
 
 		dL_dmedian_depth = dL_depths[MIDDEPTH_OFFSET * H * W + pix_id];
 		// dL_dmax_dweight = dL_depths[MEDIAN_WEIGHT_OFFSET * H * W + pix_id];
+		for (int i = 0; i < ED; i++)
+            dL_dpixel_extra[i] = dL_dpixel_extras[i * H * W + pix_id];
 	}
 
 	// for compute gradient with respect to depth and normal
 	float last_depth = 0;
 	float last_normal[3] = { 0 };
+    float last_extra[MAX_EXTRA_DIMS] = { 0 };
 	float accum_depth_rec = 0;
 	float accum_alpha_rec = 0;
 	float accum_normal_rec[3] = {0};
@@ -267,6 +276,8 @@ renderCUDA(
 			for (int i = 0; i < C; i++)
 				collected_colors[i * BLOCK_SIZE + block.thread_rank()] = colors[coll_id * C + i];
 				// collected_depths[block.thread_rank()] = depths[coll_id];
+			for (int i = 0; i < ED; i++)
+                collected_extras[i * BLOCK_SIZE + block.thread_rank()] = extras[coll_id * ED + i];
 		}
 		block.sync();
 
@@ -374,6 +385,21 @@ renderCUDA(
 				atomicAdd((&dL_dnormal3D[global_id * 3 + ch]), alpha * T * dL_dnormal2D[ch]);
 			}
 #endif
+
+            for (int ch = 0; ch < ED; ch++)
+            {
+                const float e = collected_extras[ch * BLOCK_SIZE + j];
+                // Update last norm (to be used in the next iteration)
+                accum_ree[ch] = last_alpha * last_extra[ch] + (1.f - last_alpha) * accum_ree[ch];
+                last_extra[ch] = e;
+
+                const float dL_dextrach = dL_dpixel_extra[ch];
+                dL_dalpha += (e - accum_ree[ch]) * dL_dextrach;
+                // Update the gradients w.r.t. norm of the Gaussian.
+                // Atomic, since this pixel is just one of potentially
+                // many that were affected by this Gaussian.
+                atomicAdd(&(dL_dextras[global_id * ED + ch]), weight * dL_dextrach);
+            }
 
 			dL_dalpha *= T;
 			// Update last alpha (to be used in the next iteration)
@@ -686,7 +712,7 @@ void BACKWARD::render(
 	const dim3 grid, const dim3 block,
 	const uint2* ranges,
 	const uint32_t* point_list,
-	int W, int H,
+	int W, int H, int ED,
 	float focal_x, float focal_y,
 	const float* bg_color,
 	const float2* means2D,
@@ -694,20 +720,23 @@ void BACKWARD::render(
 	const float* colors,
 	const float* transMats,
 	const float* depths,
+    const float* extras,
 	const float* final_Ts,
 	const uint32_t* n_contrib,
 	const float* dL_dpixels,
 	const float* dL_depths,
+    const float* dL_dpixel_extras,
 	float * dL_dtransMat,
 	float3* dL_dmean2D,
 	float* dL_dnormal3D,
 	float* dL_dopacity,
-	float* dL_dcolors)
+	float* dL_dcolors,
+    float* dL_dextras)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> >(
 		ranges,
 		point_list,
-		W, H,
+		W, H, ED,
 		focal_x, focal_y,
 		bg_color,
 		means2D,
@@ -715,14 +744,17 @@ void BACKWARD::render(
 		transMats,
 		colors,
 		depths,
+        extras,
 		final_Ts,
 		n_contrib,
 		dL_dpixels,
 		dL_depths,
+        dL_dpixel_extras,
 		dL_dtransMat,
 		dL_dmean2D,
 		dL_dnormal3D,
 		dL_dopacity,
-		dL_dcolors
+		dL_dcolors,
+        dL_dextras
 		);
 }

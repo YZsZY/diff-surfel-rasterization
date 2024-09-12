@@ -54,18 +54,20 @@ namespace FORWARD
 		const dim3 grid, dim3 block,
 		const uint2* ranges,
 		const uint32_t* point_list,
-		int W, int H,
+		int W, int H, int ED,
 		float focal_x, float focal_y,
 		const float2* points_xy_image,
 		const float* features,
 		const float* transMats,
 		const float* depths,
+        const float* extras,
 		const float4* normal_opacity,
 		float* final_T,
 		uint32_t* n_contrib,
 		const float* bg_color,
 		float* out_color,
-		float* out_others);
+		float* out_others,
+        float* out_extra);
 }
 
 

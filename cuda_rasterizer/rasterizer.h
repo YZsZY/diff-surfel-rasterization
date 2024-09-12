@@ -32,7 +32,7 @@ namespace CudaRasterizer
 			std::function<char* (size_t)> geometryBuffer,
 			std::function<char* (size_t)> binningBuffer,
 			std::function<char* (size_t)> imageBuffer,
-			const int P, int D, int M,
+			const int P, int D, int M, const int ED,
 			const float* background,
 			const int width, int height,
 			const float* means3D,
@@ -43,6 +43,7 @@ namespace CudaRasterizer
 			const float scale_modifier,
 			const float* rotations,
 			const float* transMat_precomp,
+            const float* extra_attrs,
 			const float* viewmatrix,
 			const float* projmatrix,
 			const float* cam_pos,
@@ -50,11 +51,12 @@ namespace CudaRasterizer
 			const bool prefiltered,
 			float* out_color,
 			float* out_others,
+            float* out_extra,
 			int* radii = nullptr,
 			bool debug = false);
 
 		static void backward(
-			const int P, int D, int M, int R,
+			const int P, int D, int M, int R, const int ED,
 			const float* background,
 			const int width, int height,
 			const float* means3D,
@@ -64,6 +66,7 @@ namespace CudaRasterizer
 			const float scale_modifier,
 			const float* rotations,
 			const float* transMat_precomp,
+            const float* extra_attrs,
 			const float* viewmatrix,
 			const float* projmatrix,
 			const float* campos,
@@ -74,6 +77,7 @@ namespace CudaRasterizer
 			char* image_buffer,
 			const float* dL_dpix,
 			const float* dL_depths,
+            const float* dL_dpix_dextra,
 			float* dL_dmean2D,
 			float* dL_dnormal,
 			float* dL_dopacity,
@@ -83,6 +87,7 @@ namespace CudaRasterizer
 			float* dL_dsh,
 			float* dL_dscale,
 			float* dL_drot,
+            float* dL_dextra,
 			bool debug);
 	};
 };

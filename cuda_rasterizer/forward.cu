@@ -259,17 +259,20 @@ renderCUDA(
 	const uint2* __restrict__ ranges,
 	const uint32_t* __restrict__ point_list,
 	int W, int H,
+    const int ED, //
 	float focal_x, float focal_y,
 	const float2* __restrict__ points_xy_image,
 	const float* __restrict__ features,
 	const float* __restrict__ transMats,
 	const float* __restrict__ depths,
+    const float* __restrict__ extras, // Note
 	const float4* __restrict__ normal_opacity,
 	float* __restrict__ final_T,
 	uint32_t* __restrict__ n_contrib,
 	const float* __restrict__ bg_color,
 	float* __restrict__ out_color,
-	float* __restrict__ out_others)
+	float* __restrict__ out_others,
+    float* __restrict__ out_extra)
 {
 	// Identify current tile and associated min/max pixel range.
 	auto block = cg::this_thread_block();
@@ -315,6 +318,7 @@ renderCUDA(
 	float median_depth = {0};
 	// float median_weight = {0};
 	float median_contributor = {-1};
+    float E[MAX_EXTRA_DIMS] = {0}; // extra note
 
 #endif
 
@@ -404,11 +408,14 @@ renderCUDA(
 			}
 			// Render normal map
 			for (int ch=0; ch<3; ch++) N[ch] += normal[ch] * w;
-#endif
 
+			for(int ch = 0; ch < ED; ch++)
+			    E[ch] += extras[collected_id[j] * ED + ch] * alpha * T;
+#endif
 			// Eq. (3) from 3D Gaussian splatting paper.
 			for (int ch = 0; ch < CHANNELS; ch++)
 				C[ch] += features[collected_id[j] * CHANNELS + ch] * w;
+
 			T = test_T;
 
 			// Keep track of last range entry to update this
@@ -436,6 +443,8 @@ renderCUDA(
 		out_others[pix_id + MIDDEPTH_OFFSET * H * W] = median_depth;
 		out_others[pix_id + DISTORTION_OFFSET * H * W] = distortion;
 		// out_others[pix_id + MEDIAN_WEIGHT_OFFSET * H * W] = median_weight;
+        for (int ch = 0; ch < ED; ch++)
+            out_extra[ch * H * W + pix_id] = E[ch]; // note
 #endif
 	}
 }
@@ -445,33 +454,38 @@ void FORWARD::render(
 	const uint2* ranges,
 	const uint32_t* point_list,
 	int W, int H,
+    const int ED,
 	float focal_x, float focal_y,
 	const float2* means2D,
 	const float* colors,
 	const float* transMats,
 	const float* depths,
+    const float* extras,
 	const float4* normal_opacity,
 	float* final_T,
 	uint32_t* n_contrib,
 	const float* bg_color,
 	float* out_color,
-	float* out_others)
+	float* out_others,
+    float* out_extra)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> > (
 		ranges,
 		point_list,
-		W, H,
+		W, H, ED,
 		focal_x, focal_y,
 		means2D,
 		colors,
 		transMats,
 		depths,
+        extras,
 		normal_opacity,
 		final_T,
 		n_contrib,
 		bg_color,
 		out_color,
-		out_others);
+		out_others,
+		out_extra);
 }
 
 void FORWARD::preprocess(int P, int D, int M,

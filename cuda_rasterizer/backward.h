@@ -24,23 +24,26 @@ namespace BACKWARD
 		const dim3 grid, dim3 block,
 		const uint2* ranges,
 		const uint32_t* point_list,
-		int W, int H,
+		int W, int H,  int ED,
 		float focal_x, float focal_y,
 		const float* bg_color,
 		const float2* means2D,
 		const float4* normal_opacity,
-		const float* transMats,
+		const float* transMats, // ?
 		const float* colors,
 		const float* depths,
+        const float* extras,
 		const float* final_Ts,
 		const uint32_t* n_contrib,
 		const float* dL_dpixels,
 		const float* dL_depths,
 		float * dL_dtransMat,
+        const float* dL_dpixel_extras,
 		float3* dL_dmean2D,
 		float* dL_dnormal3D,
 		float* dL_dopacity,
-		float* dL_dcolors);
+		float* dL_dcolors,
+        float* dL_dextras);
 
 	void preprocess(
 		int P, int D, int M,
