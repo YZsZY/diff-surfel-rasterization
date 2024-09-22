@@ -417,13 +417,14 @@ renderCUDA(
 			// Eq. (3) from 3D Gaussian splatting paper.
 			for (int ch = 0; ch < CHANNELS; ch++)
 				C[ch] += features[collected_id[j] * CHANNELS + ch] * w;
-
+            /*
 			if (T > 0.5f && test_T < 0.5)
 			{
-			    int gau_pixel_indice = atomicAdd(gau_pixel_indices, 1);
-			    gau_related_pixels[gau_pixel_indice * H * W] = collected_id[j];
-			    gau_related_pixels[gau_pixel_indice * H * W + 1] = pix_id;
-			}
+			    // atomicAdd(gau_pixel_indices, 1);
+			    atomicAdd(&(gau_pixel_indices[0]), 1);
+			    gau_related_pixels[H * W] = collected_id[j];
+			    gau_related_pixels[H * W + 1] = pix_id;
+			}*/
 
 			T = test_T;
 

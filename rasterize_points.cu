@@ -36,7 +36,7 @@ std::function<char*(size_t N)> resizeFunctional(torch::Tensor& t) {
 	return lambda;
 }
 
-std::tuple<int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, int*>
+std::tuple<int, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor>
 RasterizeGaussiansCUDA(
 	const torch::Tensor& background,
 	const torch::Tensor& means3D,
@@ -93,11 +93,9 @@ RasterizeGaussiansCUDA(
     out_extra = torch::full({F, H, W}, 0.0, float_opts);
   else
     out_extra = torch::empty({0}, float_opts);
-  torch::Tensor gau_related_pixels = torch::full({H*W, 2}, -1, means3D.options().dtype(torch::kInt32));
-  int* gau_pixel_indices;
-  cudaMalloc(&gau_pixel_indices, sizeof(int));
-  cudaMemset(gau_pixel_indices, -1, sizeof(int));  // 初始化为0
 
+  torch::Tensor gau_related_pixels = torch::full({H * W * 5000, 2}, -1, means3D.options().dtype(torch::kInt32));
+  torch::Tensor gau_pixel_indices = torch::full({10}, -1, means3D.options().dtype(torch::kInt32));
 
   torch::Device device(torch::kCUDA);
   torch::TensorOptions options(torch::kByte);
@@ -143,7 +141,7 @@ RasterizeGaussiansCUDA(
 		out_others.contiguous().data<float>(),
         out_extra.contiguous().data<float>(), // note
         gau_related_pixels.contiguous().data<int>(),
-        gau_pixel_indices,
+        gau_pixel_indices.contiguous().data<int>(),
 		radii.contiguous().data<int>(),
 		debug);
   }
