@@ -92,15 +92,15 @@ class _RasterizeGaussians(torch.autograd.Function):
         # Invoke C++/CUDA rasterizer
         if raster_settings.debug:
             cpu_args = cpu_deep_copy_tuple(args)  # Copy them before they can be corrupted
-            try:
-                num_rendered, color, depth, radii, extra, geomBuffer, binningBuffer, imgBuffer = _C.rasterize_gaussians(
+            try:  # gau_related_pixels:[N_pixels,2] [0]:gs_idx,[1]:pixel_idx
+                num_rendered, color, depth, radii, extra, geomBuffer, binningBuffer, imgBuffer, gau_related_pixels, gau_pixel_indices = _C.rasterize_gaussians(
                     *args)
             except Exception as ex:
                 torch.save(cpu_args, "snapshot_fw.dump")
                 print("\nAn error occured in forward. Please forward snapshot_fw.dump for debugging.")
                 raise ex
         else:
-            num_rendered, color, depth, radii, extra, geomBuffer, binningBuffer, imgBuffer = _C.rasterize_gaussians(
+            num_rendered, color, depth, radii, extra, geomBuffer, binningBuffer, imgBuffer, gau_related_pixels, gau_pixel_indices = _C.rasterize_gaussians(
                 *args)
 
         # Keep relevant tensors for backward
@@ -109,10 +109,10 @@ class _RasterizeGaussians(torch.autograd.Function):
         ctx.save_for_backward(colors_precomp, means3D, scales, rotations, cov3Ds_precomp, radii, extra_attrs, sh,
                               geomBuffer,
                               binningBuffer, imgBuffer)
-        return color, radii, depth, extra
+        return color, radii, depth, extra, gau_related_pixels
 
     @staticmethod
-    def backward(ctx, grad_out_color, grad_radii, grad_depth, grad_out_extra):
+    def backward(ctx, grad_out_color, grad_radii, grad_depth, grad_out_extra, grad_gau_related_pixels):
 
         # Restore necessary values from context
         num_rendered = ctx.num_rendered

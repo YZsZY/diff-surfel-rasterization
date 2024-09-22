@@ -220,6 +220,8 @@ int CudaRasterizer::Rasterizer::forward(
 	float* out_color,
 	float* out_others,
     float* out_extra,
+	int* gau_related_pixels,
+	int* gau_pixel_indices,
 	int* radii,
 	bool debug)
 {
@@ -341,7 +343,9 @@ int CudaRasterizer::Rasterizer::forward(
 		background,
 		out_color,
 		out_others,
-		out_extra), debug)
+		out_extra,
+		gau_related_pixels,
+		gau_pixel_indices), debug)
 
 	return num_rendered;
 }

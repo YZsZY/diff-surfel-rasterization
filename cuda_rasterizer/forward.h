@@ -67,7 +67,9 @@ namespace FORWARD
 		const float* bg_color,
 		float* out_color,
 		float* out_others,
-        float* out_extra);
+        float* out_extra,
+        int* gau_related_pixels,
+        int* gau_pixel_indices);
 }
 
 

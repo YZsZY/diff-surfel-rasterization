@@ -272,7 +272,9 @@ renderCUDA(
 	const float* __restrict__ bg_color,
 	float* __restrict__ out_color,
 	float* __restrict__ out_others,
-    float* __restrict__ out_extra)
+    float* __restrict__ out_extra,
+    int* __restrict__ gau_related_pixels,
+    int* __restrict__ gau_pixel_indices)
 {
 	// Identify current tile and associated min/max pixel range.
 	auto block = cg::this_thread_block();
@@ -416,6 +418,13 @@ renderCUDA(
 			for (int ch = 0; ch < CHANNELS; ch++)
 				C[ch] += features[collected_id[j] * CHANNELS + ch] * w;
 
+			if (T > 0.5f && test_T < 0.5)
+			{
+			    int gau_pixel_indice = atomicAdd(gau_pixel_indices, 1);
+			    gau_related_pixels[gau_pixel_indice * H * W] = collected_id[j];
+			    gau_related_pixels[gau_pixel_indice * H * W + 1] = pix_id;
+			}
+
 			T = test_T;
 
 			// Keep track of last range entry to update this
@@ -467,7 +476,9 @@ void FORWARD::render(
 	const float* bg_color,
 	float* out_color,
 	float* out_others,
-    float* out_extra)
+    float* out_extra,
+    int* gau_related_pixels,
+    int* gau_pixel_indices)
 {
 	renderCUDA<NUM_CHANNELS> << <grid, block >> > (
 		ranges,
@@ -485,7 +496,9 @@ void FORWARD::render(
 		bg_color,
 		out_color,
 		out_others,
-		out_extra);
+		out_extra,
+		gau_related_pixels,
+		gau_pixel_indices);
 }
 
 void FORWARD::preprocess(int P, int D, int M,
