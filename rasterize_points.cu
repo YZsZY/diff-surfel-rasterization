@@ -94,7 +94,7 @@ RasterizeGaussiansCUDA(
   else
     out_extra = torch::empty({0}, float_opts);
 
-  torch::Tensor gau_related_pixels = torch::full({H * W * 5000, 2}, -1, means3D.options().dtype(torch::kInt32));
+  torch::Tensor gau_related_pixels = torch::full({H * W * 1000, 2}, -1, means3D.options().dtype(torch::kInt32));
   torch::Tensor gau_pixel_indices = torch::full({1}, -1, means3D.options().dtype(torch::kInt32));
 
   torch::Device device(torch::kCUDA);
@@ -141,7 +141,7 @@ RasterizeGaussiansCUDA(
 		out_others.contiguous().data<float>(),
         out_extra.contiguous().data<float>(), // note
         gau_related_pixels.contiguous().data<int>(),
-        gau_pixel_indices.contiguous().data<int>(),
+        gau_pixel_indices.data<int>(),
 		radii.contiguous().data<int>(),
 		debug);
   }

@@ -92,7 +92,7 @@ class _RasterizeGaussians(torch.autograd.Function):
         # Invoke C++/CUDA rasterizer
         if raster_settings.debug:
             cpu_args = cpu_deep_copy_tuple(args)  # Copy them before they can be corrupted
-            try:  # gau_related_pixels:[N_pixels,2] [0]:gs_idx,[1]:pixel_idx
+            try:  # gau_related_pixels:[N_pixels,2] [0]:gs_idx,[1]:pixel_idx; len:gau_pixel_indices+1
                 num_rendered, color, depth, radii, extra, geomBuffer, binningBuffer, imgBuffer, gau_related_pixels, gau_pixel_indices = _C.rasterize_gaussians(
                     *args)
             except Exception as ex:
@@ -102,7 +102,13 @@ class _RasterizeGaussians(torch.autograd.Function):
         else:
             num_rendered, color, depth, radii, extra, geomBuffer, binningBuffer, imgBuffer, gau_related_pixels, gau_pixel_indices = _C.rasterize_gaussians(
                 *args)
-
+        '''
+        import open3d as o3d
+        gs_idxs = gau_related_pixels[:(gau_pixel_indices+1), 0]
+        pcld = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(means3D[gs_idxs].detach().cpu().numpy()))
+        o3d.visualization.draw_geometries([pcld])
+        '''
+        gau_related_pixels = gau_related_pixels[:(gau_pixel_indices + 1)]
         # Keep relevant tensors for backward
         ctx.raster_settings = raster_settings
         ctx.num_rendered = num_rendered

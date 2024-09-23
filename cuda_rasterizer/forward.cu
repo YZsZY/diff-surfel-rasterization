@@ -418,13 +418,15 @@ renderCUDA(
 			for (int ch = 0; ch < CHANNELS; ch++)
 				C[ch] += features[collected_id[j] * CHANNELS + ch] * w;
 
-			if (T > 0.5f && test_T < 0.5)
+
+			if (true) // (T > 0.5f && test_T < 0.5)
 			{
 			    // atomicAdd(&(gau_related_pixels[collected_id[j]]), 1);
-			    int gau_pixel_indice = atomicAdd(&(gau_pixel_indices[0]), 1);
+			    int gau_pixel_indice = atomicAdd(&(gau_pixel_indices[0]), 1) + 1;
 			    gau_related_pixels[gau_pixel_indice * 2] = collected_id[j];
 			    gau_related_pixels[gau_pixel_indice * 2 + 1] = pix_id;
 			}
+
 
 			T = test_T;
 
@@ -481,7 +483,7 @@ void FORWARD::render(
     int* gau_related_pixels,
     int* gau_pixel_indices)
 {
-    std::cout<<gau_pixel_indices[0]<<std::endl;
+    // std::cout<<*gau_pixel_indices<<std::endl;
 	renderCUDA<NUM_CHANNELS> << <grid, block >> > (
 		ranges,
 		point_list,
