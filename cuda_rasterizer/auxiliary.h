@@ -17,7 +17,7 @@
 
 #define BLOCK_SIZE (BLOCK_X * BLOCK_Y)
 #define NUM_WARPS (BLOCK_SIZE/32)
-#define MAX_EXTRA_DIMS 32 // feat dim
+#define MAX_EXTRA_DIMS 24 // feat dim
 
 #define TIGHTBBOX 0
 #define RENDER_AXUTILITY 1
